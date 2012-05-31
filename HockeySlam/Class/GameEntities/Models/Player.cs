@@ -255,7 +255,7 @@ namespace HockeySlam.Class.GameEntities.Models
 		}
 
 		/// <summary>
-		/// Applies prediction and smoothing to a remotely controlled tank.
+		/// Applies prediction and smoothing to a remotely controlled player.
 		/// </summary>
 		public void UpdateRemote(int framesBetweenPackets, bool enablePrediction, GameTime gameTime)
 		{
@@ -300,9 +300,8 @@ namespace HockeySlam.Class.GameEntities.Models
 			packetWriter.Write(RotationInput);
 		}
 
-		public void ServerWriteNetworkPacket(PacketWriter packetWriter, GameTime gameTime)
+		public void ServerWriteNetworkPacket(PacketWriter packetWriter)
 		{
-			packetWriter.Write((float) gameTime.TotalGameTime.TotalSeconds);
 			packetWriter.Write(simulationState.Position);
 			packetWriter.Write(simulationState.Velocity);
 			packetWriter.Write(simulationState.Rotation);
@@ -318,7 +317,7 @@ namespace HockeySlam.Class.GameEntities.Models
 		}
 
 		public void ReadNetworkPacket(PacketReader packetReader, GameTime gameTime, TimeSpan latency,
-					      bool enablePrediction, bool enableSmoothing)
+					      bool enablePrediction, bool enableSmoothing, float packetSendTime)
 		{
 			if (enableSmoothing) {
 				previousState = displayState;
@@ -326,7 +325,7 @@ namespace HockeySlam.Class.GameEntities.Models
 			} else
 				_currentSmoothing = 0;
 
-			float packetSendTime = packetReader.ReadSingle();
+			//float packetSendTime = packetReader.ReadSingle();
 
 			simulationState.Position = packetReader.ReadVector3();
 			simulationState.Velocity = packetReader.ReadVector2();
@@ -354,9 +353,7 @@ namespace HockeySlam.Class.GameEntities.Models
 
 			TimeSpan oneFrame = TimeSpan.FromSeconds(1.0 / 60.0);
 
-			Console.WriteLine("-----------------------------");
 			while (latency >= oneFrame) {
-				Console.WriteLine(PositionInput);
 				UpdateState(ref simulationState, gameTime);
 				latency -= oneFrame;
 			}
