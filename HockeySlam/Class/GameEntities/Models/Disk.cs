@@ -387,7 +387,9 @@ namespace HockeySlam.Class.GameEntities.Models
 
 		public void bounce(Vector2 newVelocity)
 		{
-			simulationState.Velocity = newVelocity;
+			if (_gameManager.HasEntity("disk"))
+				displayState.Velocity = newVelocity;
+			else simulationState.Velocity = newVelocity;
 		}
 
 		public Vector2 getVelocity()
@@ -410,7 +412,7 @@ namespace HockeySlam.Class.GameEntities.Models
 		// Direction coordinates must be beetween 0 and 1
 		public void shoot(Vector2 direction)
 		{
-			displayState.Velocity = direction*_maxVelocity*5;
+			displayState.Velocity = direction*_maxVelocity*4;
 			_playerWithDisk = null;
 		}
 
