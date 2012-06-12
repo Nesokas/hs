@@ -392,6 +392,42 @@ namespace HockeySlam.Class.GameEntities.Models
 			}
 		}
 
+		/******************************AGENTS*********************************************/
+
+		public void agentsUpdate(GameTime gameTime)
+		{
+			previousState = displayState;
+
+			// TODO: Add your update code here
+			_rotation = 0;
+			//float lastRotation = Rotation;
+
+			Vector2 normalizedVelocity = normalizeVelocity(displayState.Velocity);
+			float time = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+			updatePositionVector(gameTime, normalizedVelocity, displayState.LastRotation, time, ref displayState);
+			updateBoundings(gameTime, displayState.LastRotation, time);
+
+			UpdatePosition(ref displayState);
+			UpdateRotation(ref displayState);
+			isOutOfScreen();
+
+			//setRotation(_rotation);
+			if (displayState.Position != displayState.LastPositionVector || displayState.Rotation != displayState.LastRotation) {
+				notify(displayState);
+				displayState.LastPositionVector = displayState.Position;
+				//lastTempRotation = tempRotation;
+			}
+
+			if (!_collidedWithCourt) {
+				activateKeyboard();
+			}
+
+			simulationState = displayState;
+		}
+
+		/*********************************************************************************/
+
 		private void UpdateRotation(ref PlayerState state)
 		{
 			KeyboardKey indexToConsider;

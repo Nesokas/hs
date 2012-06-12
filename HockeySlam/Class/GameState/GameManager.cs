@@ -56,8 +56,7 @@ namespace HockeySlam.Class.GameState
 			}
 			//AddEntity("disk", new Disk(this, _game, camera));
 			AddEntity("ice", new Ice(_game, camera, this));
-			if(_networkSession != null)
-				AddEntity("particleManager", new ParticleManager(_game, camera, _networkSession));
+			AddEntity("particleManager", new ParticleManager(this, _game, camera, _networkSession));
 			AddEntity("arrowManager", new ArrowManager(_game));
 		}
 
@@ -130,6 +129,11 @@ namespace HockeySlam.Class.GameState
 		{
 			if (activeEntities.ContainsKey(name))
 				activeEntities.Remove(name);
+		}
+
+		public bool HasEntity(string name)
+		{
+			return allEntities.ContainsKey(name);
 		}
 
 		#endregion

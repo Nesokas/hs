@@ -153,7 +153,7 @@ namespace HockeySlam.Class.GameEntities
 				generateKeys();
 
 
-			_player.Update(gameTime);
+			_player.agentsUpdate(gameTime);
 			Vector3 playerPosition = _player.getPositionVector();
 			_boundingSphere.Center = playerPosition;
 			float x, y, z;

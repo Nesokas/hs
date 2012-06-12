@@ -157,6 +157,8 @@ namespace HockeySlam.Class.GameEntities.Models
 
 		public override void Update(GameTime gameTime)
 		{
+			if (_gameManager.HasEntity("disk"))
+				AgentsUpdate(gameTime);
 			base.Update(gameTime);
 		}
 
@@ -188,6 +190,40 @@ namespace HockeySlam.Class.GameEntities.Models
 			}
 
 		}
+		/**********************************AGENTS******************************************/
+		public void AgentsUpdate(GameTime gameTime)
+		{
+			previousState = displayState;
+
+			if (!_isSinglePlayer || _playerWithDisk == null) {
+
+
+				if (!displayState.IsColliding) {
+					UpdateVelocityX(ref displayState, drag, moreDrag);
+					UpdateVelocityY(ref displayState, drag, moreDrag);
+				}
+
+				displayState.IsColliding = false;
+
+				Vector2 normalizedVelocity = normalizeVelocity(displayState.Velocity);
+				float time = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+				displayState.Position.X += time * displayState.Velocity.Y * normalizedVelocity.Y;
+				displayState.Position.Z += time * displayState.Velocity.X * normalizedVelocity.X;
+
+				displayState.CollisionArea.Center.X = displayState.Position.X;
+				displayState.CollisionArea.Center.Z = displayState.Position.Z;
+				notify();
+			} else {
+				displayState.Position = _playerWithDisk.getPlayer().getStickPosition();
+				displayState.CollisionArea.Center = _playerWithDisk.getPlayer().getStickPosition();
+				displayState.Velocity = Vector2.Zero;
+			}
+
+			simulationState = displayState;
+
+		}
+		/**********************************************************************************/
 
 		public void ServerWriteNetworkPacket(PacketWriter packetWriter)
 		{

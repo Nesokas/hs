@@ -18,14 +18,16 @@ namespace HockeySlam.Class.GameState
 		Game game;
 		Camera camera;
 		NetworkSession networkSession;
+		GameManager gameManager;
 
 		List<ParticleSystem> particles;
 
-		public ParticleManager(Game game, Camera camera, NetworkSession networkSession)
+		public ParticleManager(GameManager gameManager, Game game, Camera camera, NetworkSession networkSession)
 		{
 			this.game = game;
 			this.camera = camera;
 			this.networkSession = networkSession;
+			this.gameManager = gameManager;
 		}
 
 		public void Initialize()
@@ -40,10 +42,21 @@ namespace HockeySlam.Class.GameState
 
 		private void InitializeParticles()
 		{
-			foreach (NetworkGamer gamer in networkSession.AllGamers) {
-				Player player = gamer.Tag as Player;
-				particles.Add(new Trail(game, game.Content, player));
-				particles.Add(new IceParticles(game, game.Content, player));
+			if (networkSession == null) {
+				ReactiveAgentManager rm = (ReactiveAgentManager)gameManager.getGameEntity("reactiveAgentManager");
+				List<ReactiveAgent> ras = rm.getReactiveAgents();
+
+				foreach (ReactiveAgent ra in ras) {
+					Player player = ra.getPlayer();
+					particles.Add(new Trail(game, game.Content, player));
+					particles.Add(new IceParticles(game, game.Content, player));
+				}
+			} else {
+				foreach (NetworkGamer gamer in networkSession.AllGamers) {
+					Player player = gamer.Tag as Player;
+					particles.Add(new Trail(game, game.Content, player));
+					particles.Add(new IceParticles(game, game.Content, player));
+				}
 			}
 		}
 

@@ -111,7 +111,7 @@ namespace HockeySlam.Class.GameEntities.Models
 
 			Vector4 clipPlane = new Vector4(0, 1, 0, 0);
 			_graphics.SetRenderTarget(_reflectionTarg);
-			_graphics.Clear(Color.White);
+			_graphics.Clear(Color.CornflowerBlue);
 
 			foreach (IReflectable reflectable in _reflectedObjects) {
 				reflectable.setClipPlane(clipPlane);
@@ -169,7 +169,7 @@ namespace HockeySlam.Class.GameEntities.Models
 			_traceFadeTexture.SetData<Color>(content);
 			//_traceFadeTexture.Dispose();
 
-			_graphics.Clear(Color.CornflowerBlue);
+			_graphics.Clear(Color.White);
 
 		}
 

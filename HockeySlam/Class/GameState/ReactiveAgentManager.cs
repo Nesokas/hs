@@ -67,5 +67,10 @@ namespace HockeySlam.Class.GameState
 
 		public void LoadContent()
 		{}
+
+		public List<ReactiveAgent> getReactiveAgents()
+		{
+			return playerList;
+		}
 	}
 }
