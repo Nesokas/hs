@@ -10,7 +10,7 @@ using HockeySlam.Interface;
 
 namespace HockeySlam.Class.GameEntities.Models
 {
-	class Court : BaseModel, IReflectable, IDebugEntity, ICollidable
+	public class Court : BaseModel, IReflectable, IDebugEntity, ICollidable
 	{
 		Matrix rotation = Matrix.Identity;
 		Effect _effect;

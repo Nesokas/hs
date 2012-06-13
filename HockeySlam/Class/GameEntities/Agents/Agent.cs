@@ -2,47 +2,49 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+
 using Microsoft.Xna.Framework;
-using HockeySlam.Class.GameEntities.Models;
 using Microsoft.Xna.Framework.Input;
 
 using HockeySlam.Class.GameState;
+using HockeySlam.Class.GameEntities.Models;
 using HockeySlam.Interface;
 
-namespace HockeySlam.Class.GameEntities
+namespace HockeySlam.Class.GameEntities.Agents
 {
-	public class ReactiveAgent : IDebugEntity
+	public class Agent : IDebugEntity
 	{
-		BoundingFrustum _fov;
-		Player _player;
-		float _viewDistance=50;
-		Game _game;
-		Camera _camera;
-		Court _court;
-		Disk _disk;
-		BoundingSphere _boundingSphere;
-		Random _randomGenerator;
-		Vector2 _direction;
-		Vector3 _lastPositionWithDisk;
-		float _fovRotation;
-		float _farPlane;
+		protected BoundingFrustum _fov;
+		protected Player _player;
+		protected float _viewDistance = 50;
+		protected Game _game;
+		protected Camera _camera;
+		protected Court _court;
+		protected Disk _disk;
+		protected BoundingSphere _boundingSphere;
+		protected Random _randomGenerator;
+		protected Vector2 _direction;
+		protected Vector3 _lastPositionWithDisk;
+		protected float _fovRotation;
+		protected float _farPlane;
 
-		bool _hasDisk;
-		int _team;
-		bool _hasShoot;
+		protected bool _hasDisk;
+		protected int _team;
+		protected bool _hasShoot;
 
-		private Matrix view
+		protected Matrix view
 		{
 			get;
 			set;
 		}
 
-		private Matrix projection
+		protected Matrix projection
 		{
 			get;
 			set;
 		}
-		public ReactiveAgent(GameManager gameManager, Game game, Camera camera, int team)
+
+		public Agent(GameManager gameManager, Game game, Camera camera, int team)
 		{
 			_player = new Player(gameManager, game, camera, team, true);
 			_game = game;
@@ -85,8 +87,6 @@ namespace HockeySlam.Class.GameEntities
 			_lastPositionWithDisk = Vector3.Zero;
 		}
 
-
-
 		public void DrawDebug()
 		{
 			BoundingSphereRender.Render(_fov, _game.GraphicsDevice, _camera.view, _camera.projection, Color.Red);
@@ -94,7 +94,7 @@ namespace HockeySlam.Class.GameEntities
 
 		}
 
-		private bool moveTowardsDisk()
+		protected bool moveTowardsDisk()
 		{
 			Vector2 newPositionInput = Vector2.Zero;
 			List<BoundingSphere> listBounding = _disk.getBoundingSpheres();
@@ -122,8 +122,9 @@ namespace HockeySlam.Class.GameEntities
 			return false;
 		}
 
-		public void update(GameTime gameTime)
+		public void update(Object gameTimeObject)
 		{
+			GameTime gameTime = (GameTime)gameTimeObject;
 			if(this != _disk.getPlayerWithDisk())
 				_hasDisk = false;
 
@@ -152,8 +153,8 @@ namespace HockeySlam.Class.GameEntities
 			if(pos.X == 0 && pos.Y == 0)
 				generateKeys();
 
-
 			_player.agentsUpdate(gameTime);
+
 			Vector3 playerPosition = _player.getPositionVector();
 			_boundingSphere.Center = playerPosition;
 			float x, y, z;
@@ -176,28 +177,18 @@ namespace HockeySlam.Class.GameEntities
 			_player.Draw(gameTime);
 		}
 
-		private void generateKeys()
+		protected virtual void generateKeys()
 		{
-			bool isDiskInRange;
-			if (isDiskAhead() && !_hasDisk && !sameTeam(_disk.getPlayerWithDisk())) {
-				isDiskInRange = moveTowardsDisk();
-				if (isDiskInRange && !_hasShoot && _player.getPositionVector() != _lastPositionWithDisk) {
-					grabDisk();
-				}
-			} else if(_hasDisk)
-				findGoal();
-			else if(!_hasDisk)
-				moveRandomly();
 		}
 
-		private void grabDisk()
+		protected void grabDisk()
 		{
 			_disk.newPlayerWithDisk(this);
 			_hasDisk = true;
 			_lastPositionWithDisk = _player.getPositionVector();
 		}
 
-		private void findGoal()
+		protected void findGoal()
 		{
 			bool seeGoal = false;
 			if(_team == 1 && _fov.Intersects(_court.getTeam1Goal()))
@@ -212,7 +203,7 @@ namespace HockeySlam.Class.GameEntities
 			}
 		}
 
-		private void moveTowardsDirection()
+		protected void moveTowardsDirection()
 		{
 			Vector2 newPositionInput = Vector2.Zero;
 			if (_direction.X > 0)
@@ -227,7 +218,7 @@ namespace HockeySlam.Class.GameEntities
 			_player.PositionInput = newPositionInput;
 		}
 
-		private void rotate()
+		protected void rotate()
 		{
 			if (_randomGenerator.Next(2) == 0) {
 				_fovRotation += 0.2f;
@@ -238,7 +229,7 @@ namespace HockeySlam.Class.GameEntities
 			}
 		}
 
-		private void moveRandomly()
+		protected void moveRandomly()
 		{
 			if (_randomGenerator.Next(2) == 0)
 				moveTowardsDirection();
@@ -246,7 +237,7 @@ namespace HockeySlam.Class.GameEntities
 				rotate();
 		}
 
-		private void shoot()
+		protected void shoot()
 		{
 			Vector2 goalPosition;
 			Vector2 shotDirection = Vector2.Zero;
@@ -265,7 +256,7 @@ namespace HockeySlam.Class.GameEntities
 			_disk.shoot(shotDirection);
 		}
 
-		private bool isDiskAhead()
+		protected bool isDiskAhead()
 		{
 			List<BoundingSphere> boundingList = _disk.getBoundingSpheres();
 			foreach(BoundingSphere bs in boundingList) {
@@ -276,7 +267,7 @@ namespace HockeySlam.Class.GameEntities
 			return false;
 		}
 
-		private bool isWallAhead()
+		protected bool isWallAhead()
 		{
 			List<BoundingBox> boundingList = _court.getBoundingBoxes();
 			foreach (BoundingBox bb in boundingList) {
@@ -303,7 +294,7 @@ namespace HockeySlam.Class.GameEntities
 			return _team;
 		}
 
-		public bool sameTeam(ReactiveAgent agent)
+		public bool sameTeam(Agent agent)
 		{
 			if(agent != null) 
 				return agent.getTeam() == _team;

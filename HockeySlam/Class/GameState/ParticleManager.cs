@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework.Net;
 
 using HockeySlam.Interface;
 using HockeySlam.Class.GameEntities;
+using HockeySlam.Class.GameEntities.Agents;
 using HockeySlam.Class.GameEntities.Particles;
 using HockeySlam.Class.Particles;
 using HockeySlam.Class.GameEntities.Models;
@@ -43,8 +44,8 @@ namespace HockeySlam.Class.GameState
 		private void InitializeParticles()
 		{
 			if (networkSession == null) {
-				ReactiveAgentManager rm = (ReactiveAgentManager)gameManager.getGameEntity("reactiveAgentManager");
-				List<ReactiveAgent> ras = rm.getReactiveAgents();
+				AgentsManager rm = (AgentsManager)gameManager.getGameEntity("reactiveAgentManager");
+				List<Agent> ras = rm.getAgents();
 
 				foreach (ReactiveAgent ra in ras) {
 					Player player = ra.getPlayer();

@@ -52,7 +52,7 @@ namespace HockeySlam.Class.GameState
 				AddEntity("multiplayerManager", new MultiplayerManager(_game, camera, this, _networkSession));
 			} else {
 				AddEntity("disk", new Disk(this, _game, camera, true));
-				AddEntity("reactiveAgentManager", new ReactiveAgentManager(this, _game, camera));
+				AddEntity("agentsManager", new AgentsManager(this, _game, camera));
 			}
 			//AddEntity("disk", new Disk(this, _game, camera));
 			AddEntity("ice", new Ice(_game, camera, this));

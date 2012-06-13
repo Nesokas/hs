@@ -10,6 +10,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
 using HockeySlam.Class.GameEntities;
+using HockeySlam.Class.GameEntities.Agents;
 using HockeySlam.Class.GameState;
 using HockeySlam.Interface;
 using Microsoft.Xna.Framework.Net;
@@ -60,7 +61,7 @@ namespace HockeySlam.Class.GameEntities.Models
 		DiskState displayState;
 
 		/* -------------------- AGENTS ----------------------*/
-		ReactiveAgent _playerWithDisk;
+		Agent _playerWithDisk;
 		bool _isSinglePlayer;
 
 		public Disk(GameManager gameManager, Game game, Camera camera, bool isSinglePlayer)
@@ -404,7 +405,7 @@ namespace HockeySlam.Class.GameEntities.Models
 
 		/* -------------------------- AGENTS --------------------------- */
 
-		public void newPlayerWithDisk(ReactiveAgent player) {
+		public void newPlayerWithDisk(Agent player) {
 			player.removePlayerDisk();
 			_playerWithDisk = player;
 		}
@@ -416,7 +417,7 @@ namespace HockeySlam.Class.GameEntities.Models
 			_playerWithDisk = null;
 		}
 
-		public ReactiveAgent getPlayerWithDisk()
+		public Agent getPlayerWithDisk()
 		{
 			return _playerWithDisk;
 		}

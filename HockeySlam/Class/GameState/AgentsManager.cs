@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Linq;
 using System.Text;
 using Microsoft.Xna.Framework;
@@ -8,12 +9,13 @@ using Microsoft.Xna.Framework.Input;
 using HockeySlam.Class.GameEntities.Models;
 using HockeySlam.Class.GameState;
 using HockeySlam.Class.GameEntities;
+using HockeySlam.Class.GameEntities.Agents;
 using HockeySlam.Interface;
 
 
 namespace HockeySlam.Class.GameState
 {
-	class ReactiveAgentManager: IGameEntity
+	class AgentsManager: IGameEntity
 	{
 
 		GameManager _gameManager;
@@ -22,9 +24,10 @@ namespace HockeySlam.Class.GameState
 		bool _addAgentKeyPressed;
 		int _team;
 
-		List<ReactiveAgent> playerList = new List<ReactiveAgent>();
+		List<Agent> playerList = new List<Agent>();
+		Dictionary<Agent, Thread> playerThreads = new Dictionary<Agent, Thread>();
 
-		public ReactiveAgentManager(GameManager gameManager, Game game, Camera camera)
+		public AgentsManager(GameManager gameManager, Game game, Camera camera)
 		{
 			_gameManager = gameManager;
 			_game = game;
@@ -34,7 +37,10 @@ namespace HockeySlam.Class.GameState
 
 		public void addReactiveAgent()
 		{
-			playerList.Add(new ReactiveAgent(_gameManager, _game, _camera, _team+1));
+			ReactiveAgent ra = new ReactiveAgent(_gameManager, _game, _camera, _team+1);
+			playerList.Add(ra);
+			Thread playerThread = new Thread(new ParameterizedThreadStart(ra.update));
+			playerThreads.Add(ra, playerThread);
 			_team = (_team + 1) % 2;
 		}
 
@@ -48,14 +54,25 @@ namespace HockeySlam.Class.GameState
 			} else if (keyboard.IsKeyUp(Keys.R) && _addAgentKeyPressed)
 				_addAgentKeyPressed = false;
 
-			foreach (ReactiveAgent agent in playerList) {
-				agent.update(gameTime);
+			foreach (Agent agent in playerList) {
+				Thread playerThread = playerThreads[agent];
+
+				if (playerThread.ThreadState == ThreadState.Unstarted) {
+					playerThread.Priority = ThreadPriority.Highest;
+					playerThread.Start(gameTime);
+				} else if (playerThread.ThreadState == ThreadState.Stopped) {
+					playerThread.Join();
+					playerThread = new Thread(new ParameterizedThreadStart(agent.update));
+					playerThread.Priority = ThreadPriority.Highest;
+					playerThread.Start(gameTime);
+					playerThreads[agent] = playerThread;
+				}
 			}
 		}
 
 		public void Draw(GameTime gameTime)
 		{
-			foreach (ReactiveAgent agent in playerList) {
+			foreach (Agent agent in playerList) {
 				agent.draw(gameTime);
 			}
 		}
@@ -68,7 +85,7 @@ namespace HockeySlam.Class.GameState
 		public void LoadContent()
 		{}
 
-		public List<ReactiveAgent> getReactiveAgents()
+		public List<Agent> getAgents()
 		{
 			return playerList;
 		}
