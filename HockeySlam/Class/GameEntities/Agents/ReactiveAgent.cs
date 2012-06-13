@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
@@ -31,6 +30,15 @@ namespace HockeySlam.Class.GameEntities.Agents
 				findGoal();
 			else if (!_hasDisk)
 				moveRandomly();
+		}
+
+		protected void findGoal()
+		{
+			if (canSeeGoal())
+				shoot();
+			else {
+				moveRandomly();
+			}
 		}
 
 	}

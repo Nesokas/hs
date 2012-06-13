@@ -91,7 +91,6 @@ namespace HockeySlam.Class.GameEntities.Agents
 		{
 			BoundingSphereRender.Render(_fov, _game.GraphicsDevice, _camera.view, _camera.projection, Color.Red);
 			BoundingSphereRender.Render(_boundingSphere, _game.GraphicsDevice, _camera.view, _camera.projection, Color.Blue);
-
 		}
 
 		protected bool moveTowardsDisk()
@@ -118,6 +117,16 @@ namespace HockeySlam.Class.GameEntities.Agents
 				newPositionInput.X = 0;
 
 			_player.PositionInput = newPositionInput;
+
+			return false;
+		}
+
+		protected bool canSeeGoal()
+		{
+			if (_team == 1 && _fov.Intersects(_court.getTeam1Goal()))
+				return true;
+			else if (_team == 2 && _fov.Intersects(_court.getTeam2Goal()))
+				return true;
 
 			return false;
 		}
@@ -188,21 +197,6 @@ namespace HockeySlam.Class.GameEntities.Agents
 			_lastPositionWithDisk = _player.getPositionVector();
 		}
 
-		protected void findGoal()
-		{
-			bool seeGoal = false;
-			if(_team == 1 && _fov.Intersects(_court.getTeam1Goal()))
-				seeGoal = true;
-			else if(_team == 2 && _fov.Intersects(_court.getTeam2Goal()))
-				seeGoal = true;
-
-			if (seeGoal)
-				shoot();
-			else {
-				moveRandomly();
-			}
-		}
-
 		protected void moveTowardsDirection()
 		{
 			Vector2 newPositionInput = Vector2.Zero;
@@ -235,7 +229,7 @@ namespace HockeySlam.Class.GameEntities.Agents
 				moveTowardsDirection();
 			else
 				rotate();
-		}
+		}	
 
 		protected void shoot()
 		{
@@ -267,6 +261,17 @@ namespace HockeySlam.Class.GameEntities.Agents
 			return false;
 		}
 
+		protected bool canSeePlayer(Agent agent)
+		{
+			Player agentPlayer = agent.getPlayer();
+			List<BoundingSphere> boundingList = agentPlayer.getBoundingSpheres();
+			foreach (BoundingSphere bs in boundingList) {
+				if (bs.Intersects(_fov))
+					return true;
+			}
+			return false;
+		}
+
 		protected bool isWallAhead()
 		{
 			List<BoundingBox> boundingList = _court.getBoundingBoxes();
@@ -294,7 +299,7 @@ namespace HockeySlam.Class.GameEntities.Agents
 			return _team;
 		}
 
-		public bool sameTeam(Agent agent)
+		protected bool sameTeam(Agent agent)
 		{
 			if(agent != null) 
 				return agent.getTeam() == _team;
