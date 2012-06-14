@@ -14,21 +14,20 @@ namespace HockeySlam.Class.GameEntities.Agents
 {
 	public enum Desire
 	{
+		SCORE,
+		TACKLE
+	}
+
+	public enum Intention
+	{
 		PASS,
 		SHOOT,
 		JINK,
 		HEAD_TO_GOAL,
 		HEAD_TO_GOAL_NO_DISK,
 		SEARCH_DISK,
+		SEARCH_PLAYER_WITH_DISK,
 		GRAB_DISK,
-		GOTO_DISK,
-		GOTO_TEAM_PLAYER,
-	}
-
-	public enum Intention
-	{
-		SCORE,
-		TACKLE
 	}
 
 	public class BDIAgent : Agent
@@ -37,74 +36,117 @@ namespace HockeySlam.Class.GameEntities.Agents
 		{
 			public Dictionary<Agent, Vector3> sameTeamPositions;
 			public Dictionary<Agent, Vector3> otherTeamPositions;
+			public List<Agent> sawAgents;
 			public bool hasFoundDisk;
+			public bool canSeeDisk;
+			public bool canSeeTeamGoal;
+			public Agent agentNearGoal;
 			public Vector3 diskPosition;
-			public Vector2 playerGoalPosition;
+			public Vector2 teamGoalPosition;
+			public Agent playerWithDisk;
+			public Vector3 positionToPass;
 		}
 
 		AgentsManager agentsManager;
 
 		Beliefs agentBeliefs;
 		Desire desire;
-		Intention intension;
+		Intention intention;
 
 		public BDIAgent(GameManager gameManager, Game game, Camera camera, int team)
 			: base(gameManager, game, camera, team)
 		{
 			agentBeliefs.hasFoundDisk = false;
 			if (team == 1)
-				agentBeliefs.playerGoalPosition = _court.getTeam1GoalPosition();
+				agentBeliefs.teamGoalPosition = _court.getTeam1GoalPosition();
 			else if (team == 2)
-				agentBeliefs.playerGoalPosition = _court.getTeam2GoalPosition();
+				agentBeliefs.teamGoalPosition = _court.getTeam2GoalPosition();
 
 			agentsManager = (AgentsManager)gameManager.getGameEntity("agentsManager");
 
 			agentBeliefs.sameTeamPositions = new Dictionary<Agent, Vector3>();
 			agentBeliefs.otherTeamPositions = new Dictionary<Agent, Vector3>();
+			agentBeliefs.sawAgents = new List<Agent>();
 
-			intension = Intention.SCORE;
+			intention = Intention.SEARCH_DISK;
 		}
 
 		protected override void generateKeys()
 		{
 			updateBeliefs();
-			options();
+			updateDesires();
+			updateIntentions();
+
+			//if (intention == Intention.SCORE)
 		}
 
-		private void options()
+		private void updateIntentions()
 		{
-			if (intension == Intention.SCORE && !_hasDisk)
-				gotoDiskPosition();
-			else if (intension == Intention.SCORE && _hasDisk)
-				gotoGoal();
+			if (desire == Desire.SCORE) {
+				if (intention == Intention.SEARCH_DISK && agentBeliefs.canSeeDisk && agentBeliefs.playerWithDisk == null)
+					intention = Intention.GRAB_DISK;
+				else if (intention == Intention.SEARCH_DISK && agentBeliefs.canSeeDisk && sameTeam(agentBeliefs.playerWithDisk))
+					intention = Intention.HEAD_TO_GOAL_NO_DISK;
+				else if (intention == Intention.SEARCH_DISK && agentBeliefs.canSeeDisk && !sameTeam(agentBeliefs.playerWithDisk))
+					intention = Intention.JINK;
+				else if (intention == Intention.HEAD_TO_GOAL_NO_DISK && agentBeliefs.canSeeDisk && !sameTeam(agentBeliefs.playerWithDisk))
+					intention = Intention.JINK;
+				else if (intention == Intention.HEAD_TO_GOAL_NO_DISK && agentBeliefs.canSeeDisk && agentBeliefs.playerWithDisk == null)
+					intention = Intention.GRAB_DISK;
+				else if (intention == Intention.GRAB_DISK && _hasDisk && agentBeliefs.agentNearGoal != null)
+					intention = Intention.PASS;
+				else if (intention == Intention.GRAB_DISK && _hasDisk && !agentBeliefs.canSeeTeamGoal)
+					intention = Intention.HEAD_TO_GOAL;
+				else if (intention == Intention.GRAB_DISK && _hasDisk && agentBeliefs.canSeeTeamGoal)
+					intention = Intention.SHOOT;
+				else if (!_hasDisk)
+					intention = Intention.SEARCH_DISK;
+			} else {
+				if ((intention == Intention.SEARCH_PLAYER_WITH_DISK || intention == Intention.JINK) && sameTeam(agentBeliefs.playerWithDisk))
+					intention = Intention.HEAD_TO_GOAL_NO_DISK;
+				else if ((intention == Intention.SEARCH_PLAYER_WITH_DISK || intention == Intention.JINK) && agentBeliefs.canSeeDisk && agentBeliefs.playerWithDisk == null)
+					intention = Intention.GRAB_DISK;
+				else if (intention == Intention.JINK && agentBeliefs.sawAgents.Contains(agentBeliefs.playerWithDisk))
+					intention = Intention.SEARCH_PLAYER_WITH_DISK;
+				else if (!_hasDisk)
+					intention = Intention.SEARCH_DISK;
+			}
 		}
 
-		private void gotoGoal()
+		private void updateDesires()
 		{
-			Agent agentPlayer;
-			if (isPlayerSameTeamNearGoal(out agentPlayer) && canSeePlayer(agentPlayer))
-				desire = Desire.PASS;
-			else if (agentPlayer != null)
-				desire = Desire.GOTO_TEAM_PLAYER;
-			else
-				desire = Desire.HEAD_TO_GOAL;
+			if (!sameTeam(agentBeliefs.playerWithDisk) && agentBeliefs.playerWithDisk != null)
+				desire = Desire.TACKLE;
+			else desire = Desire.SCORE;
+
 		}
 
 		private bool isPlayerSameTeamNearGoal(out Agent agentPlayer)
 		{
-			throw new NotImplementedException();
-		}
+			double distance = 100000;
+			agentPlayer = null;
 
-		private void gotoDiskPosition()
-		{
-			if (isDiskAhead() && _disk.getPlayerWithDisk() == null)
-				desire = Desire.GRAB_DISK;
-			else if (isDiskAhead() && !sameTeam(_disk.getPlayerWithDisk()))
-				desire = Desire.JINK;
-			else if (!agentBeliefs.hasFoundDisk)
-				desire = Desire.SEARCH_DISK;
-			else if (!agentBeliefs.hasFoundDisk)
-				desire = Desire.GOTO_DISK;
+			foreach (KeyValuePair<Agent, Vector3> pair in agentBeliefs.sameTeamPositions) {
+				Vector2 playerPos = new Vector2(pair.Value.X, pair.Value.Z);
+				Vector2 playerVector = agentBeliefs.teamGoalPosition - playerPos;
+				double playerDistance = Math.Sqrt(Math.Pow(playerVector.X, 2) + Math.Pow(playerVector.Y, 2));
+				if (playerDistance < distance) {
+					distance = playerDistance;
+					agentPlayer = pair.Key;
+				}
+			}
+
+			Vector3 pos = _player.getPositionVector();
+			Vector2 thisPlayerPos = new Vector2(pos.X, pos.Z);
+			Vector2 thisPlayerVector = agentBeliefs.teamGoalPosition - thisPlayerPos;
+			double thisPlayerDistance = Math.Sqrt(Math.Pow(thisPlayerVector.X, 2) + Math.Pow(thisPlayerVector.Y, 2));
+
+			if (distance < thisPlayerDistance)
+				return true;
+			else {
+				agentPlayer = null;
+				return false;
+			}
 		}
 
 		private void updateBeliefs()
@@ -112,11 +154,15 @@ namespace HockeySlam.Class.GameEntities.Agents
 			if (isDiskAhead()) {
 				agentBeliefs.hasFoundDisk = true;
 				agentBeliefs.diskPosition = _disk.getPosition();
-			}
+				agentBeliefs.canSeeDisk = true;
+				agentBeliefs.playerWithDisk = _disk.getPlayerWithDisk();
+			} else agentBeliefs.canSeeDisk = false;
 
 			List<Agent> agents = agentsManager.getAgents();
+			agentBeliefs.sawAgents.Clear();
 			foreach (Agent agent in agents) {
 				if (canSeePlayer(agent)) {
+					agentBeliefs.sawAgents.Add(agent);
 					Player agentPlayer = agent.getPlayer();
 					if (sameTeam(agent)) {
 						if (agentBeliefs.sameTeamPositions.ContainsKey(agent))
@@ -130,6 +176,10 @@ namespace HockeySlam.Class.GameEntities.Agents
 					}
 				}
 			}
+
+			isPlayerSameTeamNearGoal(out agentBeliefs.agentNearGoal);
+
+			agentBeliefs.canSeeTeamGoal = canSeeGoal();
 		}
 	}
 }
