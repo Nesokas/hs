@@ -82,8 +82,6 @@ namespace HockeySlam.Class.GameEntities.Models
 
 		public PlayerState displayState;
 
-		float _currentSmoothing;
-
 		RollingAverage _clockDelta = new RollingAverage(100);
 
 		/* -------------------------- AGENTS ----------------------------- */
@@ -255,43 +253,15 @@ namespace HockeySlam.Class.GameEntities.Models
 		}
 
 		/// <summary>
-		/// Applies prediction and smoothing to a remotely controlled player.
+		/// Applies prediction to a remotely controlled player.
 		/// </summary>
 		public void UpdateRemote(int framesBetweenPackets, bool enablePrediction, GameTime gameTime)
 		{
-			float smoothingDecay = 1.0f / framesBetweenPackets;
-
-			_currentSmoothing -= smoothingDecay;
-
-			if (_currentSmoothing < 0)
-				_currentSmoothing = 0;
-
 			if (enablePrediction) {
 				UpdateState(ref simulationState, gameTime);
-
-				if (_currentSmoothing > 0)
-					UpdateState(ref previousState, gameTime);
 			}
 
-			if (_currentSmoothing > 0)
-				ApplySmoothing();
-			else
-				displayState = simulationState;
-		}
-
-		private void ApplySmoothing()
-		{
-			displayState.Position = Vector3.Lerp(simulationState.Position,
-						 previousState.Position,
-						 _currentSmoothing);
-
-			displayState.Velocity = Vector2.Lerp(simulationState.Velocity,
-							     previousState.Velocity,
-							     _currentSmoothing);
-
-			displayState.Rotation = MathHelper.Lerp(simulationState.Rotation,
-								    previousState.Rotation,
-								    _currentSmoothing);
+			displayState = simulationState;
 		}
 
 		public void ClientWriteNetworkPacket(PacketWriter packetWriter)
@@ -317,14 +287,8 @@ namespace HockeySlam.Class.GameEntities.Models
 		}
 
 		public void ReadNetworkPacket(PacketReader packetReader, GameTime gameTime, TimeSpan latency,
-					      bool enablePrediction, bool enableSmoothing, float packetSendTime)
+					      bool enablePrediction, float packetSendTime)
 		{
-			if (enableSmoothing) {
-				previousState = displayState;
-				_currentSmoothing = 1;
-			} else
-				_currentSmoothing = 0;
-
 			//float packetSendTime = packetReader.ReadSingle();
 
 			simulationState.Position = packetReader.ReadVector3();
@@ -433,14 +397,14 @@ namespace HockeySlam.Class.GameEntities.Models
 			KeyboardKey indexToConsider;
 
 			indexToConsider = getPriorityIndex(); //Index from the PriorityVector
-			Console.WriteLine("->" + RotationInput);
+			//Console.WriteLine("->" + RotationInput);
 			if (indexToConsider == KeyboardKey.LEFT &&
 				((state.Rotation >= 0.0f && state.Rotation <= MathHelper.PiOver2) ||
 				(state.Rotation <= -3 * MathHelper.PiOver2 && state.Rotation >= -2 * MathHelper.Pi) ||
 				(state.Rotation >= 3 * MathHelper.PiOver2 && state.Rotation <= 2 * MathHelper.Pi) ||
 				(state.Rotation <= 0.0f && state.Rotation >= -MathHelper.PiOver2))) {
 				_rotation = -0.1f;
-				Console.WriteLine("oieds");
+				//Console.WriteLine("oieds");
 			} else if (indexToConsider == KeyboardKey.LEFT &&
 				  ((state.Rotation >= MathHelper.PiOver2 && state.Rotation <= 3 * MathHelper.PiOver2) ||
 				  (state.Rotation <= -MathHelper.PiOver2 && state.Rotation >= -3 * MathHelper.Pi))) {
@@ -549,7 +513,7 @@ namespace HockeySlam.Class.GameEntities.Models
 			world *= Matrix.CreateRotationY(displayState.Rotation);
 			//world *= oldWorld;
 			position = Matrix.CreateTranslation(displayState.Position.X, displayState.Position.Y, displayState.Position.Z);
-			System.Console.WriteLine(_rotation);
+			//System.Console.WriteLine(_rotation);
 			world = world * _scale * position;
 		}
 

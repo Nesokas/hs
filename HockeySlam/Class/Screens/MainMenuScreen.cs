@@ -9,8 +9,8 @@ namespace HockeySlam.Class.Screens
 		public MainMenuScreen()
 			: base("Main Menu")
 		{
-			MenuEntry singlePlayerMenuEntry = new MenuEntry("Single Player");
-			MenuEntry multiplayerMenuEntry = new MenuEntry("Multiplayer");
+			MenuEntry singlePlayerMenuEntry = new MenuEntry("AASMA");
+			MenuEntry multiplayerMenuEntry = new MenuEntry("P3DSJ");
 			MenuEntry exitMenuEntry = new MenuEntry("Exit");
 
 			singlePlayerMenuEntry.Selected += SinglePlayerMenuEntrySelected;

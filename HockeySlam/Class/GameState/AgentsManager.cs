@@ -37,10 +37,18 @@ namespace HockeySlam.Class.GameState
 
 		public void addReactiveAgent()
 		{
-			ReactiveAgent ra = new ReactiveAgent(_gameManager, _game, _camera, _team+1);
+			ReactiveAgent ra = new ReactiveAgent(_gameManager, _game, _camera, _team + 1);
 			playerList.Add(ra);
 			Thread playerThread = new Thread(new ParameterizedThreadStart(ra.update));
 			playerThreads.Add(ra, playerThread);
+			_team = (_team + 1) % 2;
+		}
+		public void addBDIAgent()
+		{
+			BDIAgent ba = new BDIAgent(_gameManager, _game, _camera, _team + 1);
+			playerList.Add(ba);
+			Thread playerThread = new Thread(new ParameterizedThreadStart(ba.update));
+			playerThreads.Add(ba, playerThread);
 			_team = (_team + 1) % 2;
 		}
 
@@ -51,7 +59,10 @@ namespace HockeySlam.Class.GameState
 			if (keyboard.IsKeyDown(Keys.R) && !_addAgentKeyPressed) {
 				addReactiveAgent();
 				_addAgentKeyPressed = true;
-			} else if (keyboard.IsKeyUp(Keys.R) && _addAgentKeyPressed)
+			} else if (keyboard.IsKeyDown(Keys.T) && !_addAgentKeyPressed) {
+				addBDIAgent();
+				_addAgentKeyPressed = true;
+			} else if ((keyboard.IsKeyUp(Keys.R) || keyboard.IsKeyUp(Keys.T)) && _addAgentKeyPressed)
 				_addAgentKeyPressed = false;
 
 			foreach (Agent agent in playerList) {

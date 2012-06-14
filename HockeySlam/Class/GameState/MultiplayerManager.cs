@@ -53,7 +53,6 @@ namespace HockeySlam.Class.GameState
 		int _framesSinceLastSend;
 
 		bool _enablePrediction = true;
-		bool _enableSmoothing = true;
 
 		public MultiplayerManager(Game game, Camera camera, GameManager gameManager, NetworkSession networkSession)
 		{
@@ -127,13 +126,10 @@ namespace HockeySlam.Class.GameState
 				if (IsPressed(Keys.O))
 					_enablePrediction = !_enablePrediction;
 
-				if (IsPressed(Keys.P))
-					_enableSmoothing = !_enableSmoothing;
 
 				_networkSession.SessionProperties[0] = (int)_networkQuality;
 				_networkSession.SessionProperties[1] = _framesBetweenPackets;
 				_networkSession.SessionProperties[2] = _enablePrediction ? 1 : 0;
-				_networkSession.SessionProperties[3] = _enableSmoothing ? 1 : 0;
 			} else {
 				if (_networkSession.SessionProperties[0] != null)
 					_networkQuality = (NetworkQuality)_networkSession.SessionProperties[0];
@@ -141,8 +137,6 @@ namespace HockeySlam.Class.GameState
 					_framesBetweenPackets = _networkSession.SessionProperties[1].Value;
 				if (_networkSession.SessionProperties[2] != null)
 					_enablePrediction = _networkSession.SessionProperties[2] != 0;
-				if (_networkSession.SessionProperties[3] != null)
-					_enableSmoothing = _networkSession.SessionProperties[3] != 0;
 			}
 
 			switch (_networkQuality) {
@@ -342,8 +336,8 @@ namespace HockeySlam.Class.GameState
 				float packetSendTime = _packetReader.ReadSingle();
 				//Vector3 diskPosition = _packetReader.ReadVector3();
 				//_disk.setPosition(diskPosition);
-				_disk.ReadNetworkPacket(_packetReader, gameTime, latency, _enablePrediction, _enableSmoothing, packetSendTime);
-				_disk.UpdateRemote(_framesBetweenPackets, _enablePrediction, gameTime);
+				_disk.ReadNetworkPacket(_packetReader, gameTime, latency, _enablePrediction, packetSendTime);
+				_disk.UpdateRemote(_enablePrediction, gameTime);
 				
 				while (_packetReader.Position < _packetReader.Length) {
 					//Read the state of one Player from the network packet
@@ -357,7 +351,7 @@ namespace HockeySlam.Class.GameState
 
 						
 
-						player.ReadNetworkPacket(_packetReader, gameTime, latency, _enablePrediction, _enableSmoothing, packetSendTime);
+						player.ReadNetworkPacket(_packetReader, gameTime, latency, _enablePrediction, packetSendTime);
 						player.UpdateRemote(_framesBetweenPackets, _enablePrediction, gameTime);
 
 						if (remoteGamer.IsLocal) {
@@ -426,22 +420,17 @@ namespace HockeySlam.Class.GameState
 			string prediction = string.Format("Prediction = {0}",
 							  _enablePrediction ? "on" : "off");
 
-			string smoothing = string.Format("Smoothing = {0}",
-							 _enableSmoothing ? "on" : "off");
-
 			// If we are the host, include prompts telling how to change the settings.
 			if (_networkSession.IsHost) {
 				quality += " (U to change)";
 				sendRate += " (I to change)";
 				prediction += " (O to toggle)";
-				smoothing += " (P to toggle)";
 			}
 
 			// Draw combined text to the screen.
 			string message = quality + "\n" +
 					 sendRate + "\n" +
-					 prediction + "\n" +
-					 smoothing;
+					 prediction;
 
 			_spriteBatch.DrawString(_font, message, new Vector2(161, 321), Color.Black);
 			_spriteBatch.DrawString(_font, message, new Vector2(160, 320), Color.White);

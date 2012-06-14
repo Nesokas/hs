@@ -12,6 +12,7 @@ using HockeySlam.Interface;
 
 namespace HockeySlam.Class.GameEntities.Agents
 {
+
 	public enum Desire
 	{
 		SCORE,
@@ -21,7 +22,8 @@ namespace HockeySlam.Class.GameEntities.Agents
 	public enum Intention
 	{
 		PASS,
-		SHOOT,
+		SHOOT_TO_GOAL,
+		SHOOT_TO_PLAYER,
 		JINK,
 		HEAD_TO_GOAL,
 		HEAD_TO_GOAL_NO_DISK,
@@ -68,6 +70,8 @@ namespace HockeySlam.Class.GameEntities.Agents
 			agentBeliefs.otherTeamPositions = new Dictionary<Agent, Vector3>();
 			agentBeliefs.sawAgents = new List<Agent>();
 
+			agentBeliefs.positionToPass = new Vector3(1000, 1000, 1000);
+
 			intention = Intention.SEARCH_DISK;
 		}
 
@@ -77,7 +81,69 @@ namespace HockeySlam.Class.GameEntities.Agents
 			updateDesires();
 			updateIntentions();
 
-			//if (intention == Intention.SCORE)
+			Console.WriteLine(intention);
+
+			if (intention == Intention.SEARCH_DISK)
+				moveRandomly();
+			else if (intention == Intention.GRAB_DISK) {
+				bool isDiskInRange;
+				isDiskInRange = moveTowardsDisk();
+				if (isDiskInRange && !_hasShoot && _player.getPositionVector() != _lastPositionWithDisk) {
+					grabDisk();
+				}
+			} else if (intention == Intention.HEAD_TO_GOAL) {
+				Vector2 newDirection = calculateDirection(ref agentBeliefs.teamGoalPosition);
+				if (!rotateTowardsDirection(newDirection))
+					moveTowardsDirection();
+			} else if (intention == Intention.SHOOT_TO_GOAL) {
+				shoot();
+			}
+		}
+
+		private bool rotateTowardsDirection(Vector2 newDirection)
+		{
+			double newDirectionAngle = Math.Acos(newDirection.X);
+			if (newDirection.Y < 0)
+				newDirectionAngle *= -1;
+
+			Console.WriteLine(_fovRotation + " " + newDirectionAngle);
+
+			if (_fovRotation < newDirectionAngle + 0.3 && _fovRotation > newDirectionAngle - 0.3) {
+					Console.WriteLine(_direction + " " + newDirection);
+					_direction = new Vector2(newDirection.Y, newDirection.X);
+					_fovRotation = (float)newDirectionAngle;
+					return false;
+			}
+
+			if (_team == 1) {
+				if ((_fovRotation >= MathHelper.PiOver2 && _fovRotation <= 3 * MathHelper.PiOver2) ||
+					(_fovRotation <= -MathHelper.PiOver2 && _fovRotation >= -3 * MathHelper.PiOver2))
+					rotateCounterclockwise();
+				else rotateClockwise();
+			} else {
+				if ((_fovRotation >= MathHelper.PiOver2 && _fovRotation <= 3 * MathHelper.PiOver2) ||
+					(_fovRotation <= -MathHelper.PiOver2 && _fovRotation >= -3 * MathHelper.PiOver2))
+					rotateClockwise();
+				else rotateCounterclockwise();
+			}
+
+			return true;
+		}
+
+		private Vector2 calculateDirection(ref Vector2 destinatePosition)
+		{
+			Vector3 thisPlayerPosition = _player.getPositionVector();
+			Vector2 newDirection = new Vector2(destinatePosition.X - thisPlayerPosition.X,
+											   destinatePosition.Y - thisPlayerPosition.Z);
+			newDirection = Vector2.Normalize(newDirection);
+			return newDirection;
+		}
+
+		private bool isPossibleGetToPlayer(Vector3 pos)
+		{
+			BoundingSphere bs = new BoundingSphere(pos, 1);
+
+			return !bs.Intersects(_fov);
 		}
 
 		private void updateIntentions()
@@ -98,8 +164,12 @@ namespace HockeySlam.Class.GameEntities.Agents
 				else if (intention == Intention.GRAB_DISK && _hasDisk && !agentBeliefs.canSeeTeamGoal)
 					intention = Intention.HEAD_TO_GOAL;
 				else if (intention == Intention.GRAB_DISK && _hasDisk && agentBeliefs.canSeeTeamGoal)
-					intention = Intention.SHOOT;
-				else if (!_hasDisk)
+					intention = Intention.SHOOT_TO_GOAL;
+				else if (intention == Intention.PASS && _hasDisk && canSeePlayer(agentBeliefs.agentNearGoal))
+					intention = Intention.SHOOT_TO_PLAYER;
+				else if (intention == Intention.HEAD_TO_GOAL && _hasDisk && agentBeliefs.canSeeTeamGoal)
+					intention = Intention.SHOOT_TO_GOAL;
+				else if (!_hasDisk && intention != Intention.GRAB_DISK)
 					intention = Intention.SEARCH_DISK;
 			} else {
 				if ((intention == Intention.SEARCH_PLAYER_WITH_DISK || intention == Intention.JINK) && sameTeam(agentBeliefs.playerWithDisk))
@@ -107,7 +177,7 @@ namespace HockeySlam.Class.GameEntities.Agents
 				else if ((intention == Intention.SEARCH_PLAYER_WITH_DISK || intention == Intention.JINK) && agentBeliefs.canSeeDisk && agentBeliefs.playerWithDisk == null)
 					intention = Intention.GRAB_DISK;
 				else if (intention == Intention.JINK && agentBeliefs.sawAgents.Contains(agentBeliefs.playerWithDisk))
-					intention = Intention.SEARCH_PLAYER_WITH_DISK;
+					intention = Intention.JINK;
 				else if (!_hasDisk)
 					intention = Intention.SEARCH_DISK;
 			}

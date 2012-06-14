@@ -33,8 +33,6 @@ namespace HockeySlam.Class.GameEntities.Models
 
 		GameManager _gameManager;
 
-		float _currentSmoothing;
-
 		RollingAverage _clockDelta = new RollingAverage(100);
 
 		public struct DiskState
@@ -233,14 +231,8 @@ namespace HockeySlam.Class.GameEntities.Models
 		}
 
 		public void ReadNetworkPacket(PacketReader packetReader, GameTime gameTime, TimeSpan latency,
-			      bool enablePrediction, bool enableSmoothing, float packetSendTime)
+			      bool enablePrediction, float packetSendTime)
 		{
-			if (enableSmoothing) {
-				previousState = displayState;
-				_currentSmoothing = 1;
-			} else
-				_currentSmoothing = 0;
-
 			//float packetSendTime = packetReader.ReadSingle();
 
 			simulationState.Position = packetReader.ReadVector3();
@@ -271,37 +263,14 @@ namespace HockeySlam.Class.GameEntities.Models
 			}
 		}
 
-		public void UpdateRemote(int framesBetweenPackets, bool enablePrediction, GameTime gameTime)
+		public void UpdateRemote(bool enablePrediction, GameTime gameTime)
 		{
-			float smoothingDecay = 1.0f / framesBetweenPackets;
-
-			_currentSmoothing -= smoothingDecay;
-
-			if (_currentSmoothing < 0)
-				_currentSmoothing = 0;
 
 			if (enablePrediction) {
 				UpdateState(ref simulationState, gameTime);
-
-				if (_currentSmoothing > 0)
-					UpdateState(ref previousState, gameTime);
 			}
 
-			if (_currentSmoothing > 0)
-				ApplySmoothing();
-			else
-				displayState = simulationState;
-		}
-
-		private void ApplySmoothing()
-		{
-			displayState.Position = Vector3.Lerp(simulationState.Position,
-						 previousState.Position,
-						 _currentSmoothing);
-
-			displayState.Velocity = Vector2.Lerp(simulationState.Velocity,
-							     previousState.Velocity,
-							     _currentSmoothing);
+			displayState = simulationState;
 		}
 
 		private void UpdateVelocityY(ref DiskState state, float drag, float moreDrag)

@@ -187,8 +187,7 @@ namespace HockeySlam.Class.GameEntities.Agents
 		}
 
 		protected virtual void generateKeys()
-		{
-		}
+		{ }
 
 		protected void grabDisk()
 		{
@@ -215,13 +214,24 @@ namespace HockeySlam.Class.GameEntities.Agents
 		protected void rotate()
 		{
 			if (_randomGenerator.Next(2) == 0) {
-				_fovRotation += 0.2f;
-				_direction.X = (float)Math.Sin(_fovRotation);
+				rotateClockwise();
 			} else {
-				_fovRotation -= 0.2f;
-				_direction.Y = (float)Math.Cos(_fovRotation);
+				rotateCounterclockwise();
 			}
 		}
+
+		protected void rotateCounterclockwise()
+		{
+			_fovRotation = (_fovRotation - 0.2f) % MathHelper.TwoPi;
+			_direction.Y = (float)Math.Cos(_fovRotation);
+		}
+
+		protected void rotateClockwise()
+		{
+			_fovRotation = (_fovRotation + 0.2f) % MathHelper.TwoPi;
+			_direction.X = (float)Math.Sin(_fovRotation);
+		}
+
 
 		protected void moveRandomly()
 		{
