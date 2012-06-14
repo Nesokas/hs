@@ -44,7 +44,7 @@ namespace HockeySlam.Class.GameState
 		private void InitializeParticles()
 		{
 			if (networkSession == null) {
-				AgentsManager rm = (AgentsManager)gameManager.getGameEntity("reactiveAgentManager");
+				AgentsManager rm = (AgentsManager)gameManager.getGameEntity("agentsManager");
 				List<Agent> ras = rm.getAgents();
 
 				foreach (ReactiveAgent ra in ras) {
