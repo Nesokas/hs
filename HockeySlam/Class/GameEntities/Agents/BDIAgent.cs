@@ -88,7 +88,7 @@ namespace HockeySlam.Class.GameEntities.Agents
 			updateDesires();
 			updateIntentions();
 
-			Console.WriteLine(intention);
+			//Console.WriteLine(intention);
 
 			if (intention == Intention.SEARCH_DISK)
 				moveRandomly();
