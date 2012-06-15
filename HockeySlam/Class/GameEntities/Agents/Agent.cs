@@ -16,7 +16,7 @@ namespace HockeySlam.Class.GameEntities.Agents
 	{
 		protected BoundingFrustum _fov;
 		protected Player _player;
-		protected float _viewDistance = 50;
+		protected float _viewDistance = 30;
 		protected Game _game;
 		protected Camera _camera;
 		protected Court _court;
@@ -56,7 +56,7 @@ namespace HockeySlam.Class.GameEntities.Agents
 			y = _player.getPositionVector().Y;
 			view = Matrix.CreateLookAt(_player.getPositionVector(), new Vector3(x, y, z), Vector3.Up);
 
-			_farPlane = 50;
+			_farPlane = _viewDistance;
 
 			projection = Matrix.CreatePerspectiveFieldOfView(
 			    MathHelper.PiOver4,
@@ -196,16 +196,16 @@ namespace HockeySlam.Class.GameEntities.Agents
 			_lastPositionWithDisk = _player.getPositionVector();
 		}
 
-		protected void moveTowardsDirection()
+		protected void moveTowardsDirection(Vector2 direction)
 		{
 			Vector2 newPositionInput = Vector2.Zero;
-			if (_direction.X > 0)
+			if (direction.X > 0)
 				newPositionInput.X = 1;
-			if (_direction.X < 0)
+			if (direction.X < 0)
 				newPositionInput.X = 2;
-			if (_direction.Y > 0)
+			if (direction.Y > 0)
 				newPositionInput.Y = 2;
-			if (_direction.Y < 0)
+			if (direction.Y < 0)
 				newPositionInput.Y = 1;
 
 			_player.PositionInput = newPositionInput;
@@ -223,6 +223,8 @@ namespace HockeySlam.Class.GameEntities.Agents
 		protected void rotateCounterclockwise()
 		{
 			_fovRotation = (_fovRotation - 0.2f) % MathHelper.TwoPi;
+			if (_fovRotation < 0)
+				_fovRotation = MathHelper.TwoPi - _fovRotation;
 			_direction.Y = (float)Math.Cos(_fovRotation);
 		}
 
@@ -236,22 +238,17 @@ namespace HockeySlam.Class.GameEntities.Agents
 		protected void moveRandomly()
 		{
 			if (_randomGenerator.Next(2) == 0)
-				moveTowardsDirection();
+				moveTowardsDirection(_direction);
 			else
 				rotate();
 		}	
 
-		protected void shoot()
+		protected void shootToPosition(Vector2 positionToShoot)
 		{
-			Vector2 goalPosition;
 			Vector2 shotDirection = Vector2.Zero;
-			if (_team == 1)
-				goalPosition = _court.getTeam1GoalPosition();
-			else
-				goalPosition = _court.getTeam2GoalPosition();
 
-			shotDirection.Y = goalPosition.X - _disk.getPosition().X;
-			shotDirection.X = goalPosition.Y - _disk.getPosition().Z;
+			shotDirection.Y = positionToShoot.X - _disk.getPosition().X;
+			shotDirection.X = positionToShoot.Y - _disk.getPosition().Z;
 
 			shotDirection = Vector2.Normalize(shotDirection);
 

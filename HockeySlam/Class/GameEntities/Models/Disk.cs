@@ -20,11 +20,11 @@ namespace HockeySlam.Class.GameEntities.Models
 {
 	public class Disk : BaseModel, IGameEntity, ICollidable, IDebugEntity, IReflectable
 	{
-		
+
 		//Vector2 _velocity;
 		int _maxVelocity;
 		//Vector3 _position;
-		
+
 
 		Matrix _rotation;
 		Matrix _scale;
@@ -32,6 +32,8 @@ namespace HockeySlam.Class.GameEntities.Models
 		float moreDrag = 0.3f;
 
 		GameManager _gameManager;
+
+		float _currentSmoothing;
 
 		RollingAverage _clockDelta = new RollingAverage(100);
 
@@ -85,7 +87,7 @@ namespace HockeySlam.Class.GameEntities.Models
 
 			world = world * _rotation * _scale * pos;
 
-			simulationState.CollisionArea = new BoundingSphere(new Vector3(4,1,0), 0.45f);
+			simulationState.CollisionArea = new BoundingSphere(new Vector3(4, 1, 0), 0.45f);
 
 			previousState = simulationState;
 			displayState = simulationState;
@@ -231,8 +233,14 @@ namespace HockeySlam.Class.GameEntities.Models
 		}
 
 		public void ReadNetworkPacket(PacketReader packetReader, GameTime gameTime, TimeSpan latency,
-			      bool enablePrediction, float packetSendTime)
+		bool enablePrediction, bool enableSmoothing, float packetSendTime)
 		{
+			if (enableSmoothing) {
+				previousState = displayState;
+				_currentSmoothing = 1;
+			} else
+				_currentSmoothing = 0;
+
 			//float packetSendTime = packetReader.ReadSingle();
 
 			simulationState.Position = packetReader.ReadVector3();
@@ -263,14 +271,37 @@ namespace HockeySlam.Class.GameEntities.Models
 			}
 		}
 
-		public void UpdateRemote(bool enablePrediction, GameTime gameTime)
+		public void UpdateRemote(int framesBetweenPackets, bool enablePrediction, GameTime gameTime)
 		{
+			float smoothingDecay = 1.0f / framesBetweenPackets;
+
+			_currentSmoothing -= smoothingDecay;
+
+			if (_currentSmoothing < 0)
+				_currentSmoothing = 0;
 
 			if (enablePrediction) {
 				UpdateState(ref simulationState, gameTime);
+
+				if (_currentSmoothing > 0)
+					UpdateState(ref previousState, gameTime);
 			}
 
-			displayState = simulationState;
+			if (_currentSmoothing > 0)
+				ApplySmoothing();
+			else
+				displayState = simulationState;
+		}
+
+		private void ApplySmoothing()
+		{
+			displayState.Position = Vector3.Lerp(simulationState.Position,
+			previousState.Position,
+			_currentSmoothing);
+
+			displayState.Velocity = Vector2.Lerp(simulationState.Velocity,
+			previousState.Velocity,
+			_currentSmoothing);
 		}
 
 		private void UpdateVelocityY(ref DiskState state, float drag, float moreDrag)
@@ -374,7 +405,8 @@ namespace HockeySlam.Class.GameEntities.Models
 
 		/* -------------------------- AGENTS --------------------------- */
 
-		public void newPlayerWithDisk(Agent player) {
+		public void newPlayerWithDisk(Agent player)
+		{
 			player.removePlayerDisk();
 			_playerWithDisk = player;
 		}
@@ -382,7 +414,7 @@ namespace HockeySlam.Class.GameEntities.Models
 		// Direction coordinates must be beetween 0 and 1
 		public void shoot(Vector2 direction)
 		{
-			displayState.Velocity = direction*_maxVelocity*4;
+			displayState.Velocity = direction * _maxVelocity * 4;
 			_playerWithDisk = null;
 		}
 

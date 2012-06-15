@@ -34,7 +34,7 @@ namespace HockeySlam.Class.GameEntities.Models
 		//Vector2 _velocity;
 		float _maxVelocity;
 		Matrix position;
-		
+
 		float _rotation;
 
 		List<Boolean> arrowKeysPressed;
@@ -82,6 +82,8 @@ namespace HockeySlam.Class.GameEntities.Models
 
 		public PlayerState displayState;
 
+		float _currentSmoothing;
+
 		RollingAverage _clockDelta = new RollingAverage(100);
 
 		/* -------------------------- AGENTS ----------------------------- */
@@ -90,12 +92,12 @@ namespace HockeySlam.Class.GameEntities.Models
 
 		//public float Rotation
 		//{
-		//        get;
-		//        set;
+		// get;
+		// set;
 		//}
 
-		/* RotationInput and PositionInput are two parameters 
-		 * that will be set by the MultiplayerManager */
+		/* RotationInput and PositionInput are two parameters
+		* that will be set by the MultiplayerManager */
 		public Vector4 RotationInput
 		{
 			get;
@@ -144,7 +146,7 @@ namespace HockeySlam.Class.GameEntities.Models
 			_verts[1] = new VertexPositionColor(new Vector3(10, 0.8f, -10), Color.Red);
 			_verts[2] = new VertexPositionColor(new Vector3(5, 0.8f, 10), Color.Green);
 			_vertexBuffer = new VertexBuffer(_game.GraphicsDevice, typeof(VertexPositionColor),
-				_verts.Length, BufferUsage.None);
+			_verts.Length, BufferUsage.None);
 			_vertexBuffer.SetData(_verts);
 			_basicEffect = new BasicEffect(_game.GraphicsDevice);
 
@@ -253,15 +255,43 @@ namespace HockeySlam.Class.GameEntities.Models
 		}
 
 		/// <summary>
-		/// Applies prediction to a remotely controlled player.
+		/// Applies prediction and smoothing to a remotely controlled player.
 		/// </summary>
 		public void UpdateRemote(int framesBetweenPackets, bool enablePrediction, GameTime gameTime)
 		{
+			float smoothingDecay = 1.0f / framesBetweenPackets;
+
+			_currentSmoothing -= smoothingDecay;
+
+			if (_currentSmoothing < 0)
+				_currentSmoothing = 0;
+
 			if (enablePrediction) {
 				UpdateState(ref simulationState, gameTime);
+
+				if (_currentSmoothing > 0)
+					UpdateState(ref previousState, gameTime);
 			}
 
-			displayState = simulationState;
+			if (_currentSmoothing > 0)
+				ApplySmoothing();
+			else
+				displayState = simulationState;
+		}
+
+		private void ApplySmoothing()
+		{
+			displayState.Position = Vector3.Lerp(simulationState.Position,
+			previousState.Position,
+			_currentSmoothing);
+
+			displayState.Velocity = Vector2.Lerp(simulationState.Velocity,
+			previousState.Velocity,
+			_currentSmoothing);
+
+			displayState.Rotation = MathHelper.Lerp(simulationState.Rotation,
+			previousState.Rotation,
+			_currentSmoothing);
 		}
 
 		public void ClientWriteNetworkPacket(PacketWriter packetWriter)
@@ -287,8 +317,14 @@ namespace HockeySlam.Class.GameEntities.Models
 		}
 
 		public void ReadNetworkPacket(PacketReader packetReader, GameTime gameTime, TimeSpan latency,
-					      bool enablePrediction, float packetSendTime)
+		bool enablePrediction, bool enableSmoothing, float packetSendTime)
 		{
+			if (enableSmoothing) {
+				previousState = displayState;
+				_currentSmoothing = 1;
+			} else
+				_currentSmoothing = 0;
+
 			//float packetSendTime = packetReader.ReadSingle();
 
 			simulationState.Position = packetReader.ReadVector3();
@@ -397,43 +433,43 @@ namespace HockeySlam.Class.GameEntities.Models
 			KeyboardKey indexToConsider;
 
 			indexToConsider = getPriorityIndex(); //Index from the PriorityVector
-			//Console.WriteLine("->" + RotationInput);
+			Console.WriteLine("->" + RotationInput);
 			if (indexToConsider == KeyboardKey.LEFT &&
-				((state.Rotation >= 0.0f && state.Rotation <= MathHelper.PiOver2) ||
-				(state.Rotation <= -3 * MathHelper.PiOver2 && state.Rotation >= -2 * MathHelper.Pi) ||
-				(state.Rotation >= 3 * MathHelper.PiOver2 && state.Rotation <= 2 * MathHelper.Pi) ||
-				(state.Rotation <= 0.0f && state.Rotation >= -MathHelper.PiOver2))) {
+			((state.Rotation >= 0.0f && state.Rotation <= MathHelper.PiOver2) ||
+			(state.Rotation <= -3 * MathHelper.PiOver2 && state.Rotation >= -2 * MathHelper.Pi) ||
+			(state.Rotation >= 3 * MathHelper.PiOver2 && state.Rotation <= 2 * MathHelper.Pi) ||
+			(state.Rotation <= 0.0f && state.Rotation >= -MathHelper.PiOver2))) {
 				_rotation = -0.1f;
-				//Console.WriteLine("oieds");
+				Console.WriteLine("oieds");
 			} else if (indexToConsider == KeyboardKey.LEFT &&
-				  ((state.Rotation >= MathHelper.PiOver2 && state.Rotation <= 3 * MathHelper.PiOver2) ||
-				  (state.Rotation <= -MathHelper.PiOver2 && state.Rotation >= -3 * MathHelper.Pi))) {
+			((state.Rotation >= MathHelper.PiOver2 && state.Rotation <= 3 * MathHelper.PiOver2) ||
+			(state.Rotation <= -MathHelper.PiOver2 && state.Rotation >= -3 * MathHelper.Pi))) {
 				_rotation = 0.1f;
 			} else if (indexToConsider == KeyboardKey.RIGHT &&
-				  ((state.Rotation >= 0.0f && state.Rotation <= MathHelper.PiOver2) ||
-				  (state.Rotation <= -3 * MathHelper.PiOver2 && state.Rotation >= -2 * MathHelper.Pi) ||
-				  (state.Rotation >= 3 * MathHelper.PiOver2 && state.Rotation <= 2 * MathHelper.Pi) ||
-				  (state.Rotation <= 0.0f && state.Rotation >= -MathHelper.PiOver2))) {
+			((state.Rotation >= 0.0f && state.Rotation <= MathHelper.PiOver2) ||
+			(state.Rotation <= -3 * MathHelper.PiOver2 && state.Rotation >= -2 * MathHelper.Pi) ||
+			(state.Rotation >= 3 * MathHelper.PiOver2 && state.Rotation <= 2 * MathHelper.Pi) ||
+			(state.Rotation <= 0.0f && state.Rotation >= -MathHelper.PiOver2))) {
 				_rotation = 0.1f;
 			} else if (indexToConsider == KeyboardKey.RIGHT &&
-				  ((state.Rotation >= MathHelper.PiOver2 && state.Rotation <= 3 * MathHelper.PiOver2) ||
-				  (state.Rotation <= -MathHelper.PiOver2 && state.Rotation >= -3 * MathHelper.Pi))) {
+			((state.Rotation >= MathHelper.PiOver2 && state.Rotation <= 3 * MathHelper.PiOver2) ||
+			(state.Rotation <= -MathHelper.PiOver2 && state.Rotation >= -3 * MathHelper.Pi))) {
 				_rotation = -0.1f;
 			} else if (indexToConsider == KeyboardKey.UP &&
-				  ((state.Rotation >= 0.0f && state.Rotation <= MathHelper.Pi) ||
-				  (state.Rotation >= -2 * MathHelper.Pi && state.Rotation <= -MathHelper.Pi))) {
+			((state.Rotation >= 0.0f && state.Rotation <= MathHelper.Pi) ||
+			(state.Rotation >= -2 * MathHelper.Pi && state.Rotation <= -MathHelper.Pi))) {
 				_rotation = 0.1f;
 			} else if (indexToConsider == KeyboardKey.UP &&
-				  ((state.Rotation >= MathHelper.Pi && state.Rotation <= 2 * MathHelper.Pi) ||
-				  (state.Rotation <= 0 && state.Rotation >= -MathHelper.Pi))) {
+			((state.Rotation >= MathHelper.Pi && state.Rotation <= 2 * MathHelper.Pi) ||
+			(state.Rotation <= 0 && state.Rotation >= -MathHelper.Pi))) {
 				_rotation = -0.1f;
 			} else if (indexToConsider == KeyboardKey.DOWN &&
-			  ((state.Rotation >= 0.0f && state.Rotation <= MathHelper.Pi) ||
-			  (state.Rotation >= -2 * MathHelper.Pi && state.Rotation <= -MathHelper.Pi))) {
+			((state.Rotation >= 0.0f && state.Rotation <= MathHelper.Pi) ||
+			(state.Rotation >= -2 * MathHelper.Pi && state.Rotation <= -MathHelper.Pi))) {
 				_rotation = -0.1f;
 			} else if (indexToConsider == KeyboardKey.DOWN &&
-				  ((state.Rotation >= MathHelper.Pi && state.Rotation <= 2 * MathHelper.Pi) ||
-				  (state.Rotation <= 0 && state.Rotation >= -MathHelper.Pi))) {
+			((state.Rotation >= MathHelper.Pi && state.Rotation <= 2 * MathHelper.Pi) ||
+			(state.Rotation <= 0 && state.Rotation >= -MathHelper.Pi))) {
 				_rotation = 0.1f;
 			} else
 				_rotation = 0.0f;
@@ -513,7 +549,7 @@ namespace HockeySlam.Class.GameEntities.Models
 			world *= Matrix.CreateRotationY(displayState.Rotation);
 			//world *= oldWorld;
 			position = Matrix.CreateTranslation(displayState.Position.X, displayState.Position.Y, displayState.Position.Z);
-			//System.Console.WriteLine(_rotation);
+			System.Console.WriteLine(_rotation);
 			world = world * _scale * position;
 		}
 

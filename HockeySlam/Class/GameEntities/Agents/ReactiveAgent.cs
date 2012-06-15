@@ -34,9 +34,12 @@ namespace HockeySlam.Class.GameEntities.Agents
 
 		protected void findGoal()
 		{
-			if (canSeeGoal())
-				shoot();
-			else {
+			if (canSeeGoal()) {
+				if (_team == 1)
+					shootToPosition(_court.getTeam1GoalPosition());
+				else
+					shootToPosition(_court.getTeam2GoalPosition());
+			} else {
 				moveRandomly();
 			}
 		}
